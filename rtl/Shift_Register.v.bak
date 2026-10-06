@@ -1,0 +1,287 @@
+//rm -rf novas* vcst* *.txt
+
+module Shift_register(pclk,preset_n,ss,send_data,lsbfe,cpha,cpol,mrs1,mrs0,mss1,mss0,data_mosi,miso,receive_data,mosi,data_miso);
+
+ input pclk,preset_n,ss;
+ input send_data;
+ input lsbfe;
+ input cpha,cpol;
+ input mrs1,mrs0,mss1,mss0;
+ input [7:0]data_mosi;
+ input miso;
+ input receive_data;
+
+
+ output reg mosi;
+ output reg [7:0]data_miso;
+
+ reg [7:0]temp_reg;
+ reg [7:0]shift_reg;
+ reg [2:0] c1,c2,c3,c4;
+
+
+assign data_miso = (receive_data == 1'b1) ? temp_reg : 8'd0;
+
+/*
+always @(posedge pclk or negedge preset_n)
+	begin
+		if(!preset_n)
+			data_miso <= 8'd0;
+		else
+			begin
+				if(receive_data)
+					data_miso <= temp_reg;
+				else
+					data_miso <= data_miso;
+			end
+	end
+*/
+
+
+always @(posedge pclk or negedge preset_n)
+	begin
+		if(!preset_n)
+			shift_reg <= 8'd0;
+		else
+			begin
+				if(send_data)
+					shift_reg <= data_mosi;
+				else
+					shift_reg <= shift_reg;
+			end
+	end
+
+
+//mrs0 and mrs1
+
+always@(posedge pclk or negedge preset_n)
+	begin
+		if(!preset_n)
+			begin
+				c3<=3'b0;
+				c4<=3'd7;
+				temp_reg <= 8'd0;
+			end 
+		else 
+			begin
+				if(ss)
+					begin
+						temp_reg[c3]<=temp_reg[c3];
+						c3<=c3;
+					end
+				else
+					begin
+						if( ((!cpha)&cpol) | ((!cpol)&cpha) )
+							begin
+								if(lsbfe)
+									begin
+										if(c3 <= 3'd7)
+											begin
+												if(mrs0)
+													begin
+														temp_reg[c3]<=miso;
+														c3<=c3+3'd1;
+													end
+												else
+													begin
+														temp_reg[c3]<=temp_reg[c3];
+														c3<=c3;
+													end
+											end
+										else
+											begin
+												c3<=3'd0;
+												temp_reg[c3]<=temp_reg[c3];
+											end
+									end
+								else
+									begin
+										if(c4 >= 3'd0)
+											begin
+												if(mrs0)
+													begin
+														temp_reg[c4]<=miso;
+														c4<=c4-3'd1;
+													end
+												else
+													begin
+														temp_reg[c4]<=temp_reg[c4];
+														c4<=c4;
+													end
+											end
+										else
+											begin
+												c4<=3'd7;
+												temp_reg[c4]<=temp_reg[c4];
+											end
+									end
+							end
+						else
+							begin
+								if(lsbfe)
+									begin
+										if(c3 <= 3'd7)
+											begin
+												if(mrs1)
+													begin
+														temp_reg[c3]<=miso;
+														c3<=c3+3'd1;
+													end
+												else
+													begin
+														temp_reg[c3]<=temp_reg[c3];
+														c3<=c3;
+													end
+											end
+										else
+											begin
+												c3<=3'd0;
+												temp_reg[c3]<=temp_reg[c3];
+											end
+									end
+								else
+									begin
+										if(c4 >= 3'd0)
+											begin
+												if(mrs1)
+													begin
+														temp_reg[c4]<=miso;
+														c4<=c4-3'd1;
+													end
+												else
+													begin
+														temp_reg[c4]<=temp_reg[c4];
+														c4<=c4;
+													end
+											end
+										else
+											begin
+												c4<=3'd7;
+												temp_reg[c4]<=temp_reg[c4];
+											end
+									end
+							end
+					end
+			end
+	end		
+
+
+
+// mss0 and mss1
+
+always@(posedge pclk or negedge preset_n)
+	begin
+		if(!preset_n)
+			begin
+				c1<=3'b0;
+				c2<=3'd7;
+			end 
+		else 
+			begin
+				if(ss)
+					begin
+						mosi<=mosi;
+						c1<=c1;
+					end
+				else
+					begin
+						if( ((!cpha)&cpol) | ((!cpol)&cpha) )
+							begin
+								if(lsbfe)
+									begin
+										if(c1<=3'd7)
+											begin
+												if(mss0)
+													begin
+														mosi<=shift_reg[c1];
+														c1<=c1+3'd1;
+													end
+												else
+													begin
+														mosi<=mosi;
+														c1<=c1;
+													end
+											end
+										else
+											begin
+												c1<=3'd0;
+												mosi<=mosi;
+											end
+									end
+								else
+									begin
+										if(c2>=3'd0)
+											begin
+												if(mss0)
+													begin
+														mosi<=shift_reg[c2];
+														c2<=c2-3'd1;
+													end
+												else
+													begin
+														mosi<=mosi;
+														c2<=c2;
+													end
+											end
+										else
+											begin
+												c2<=3'd7;
+												mosi<=mosi;
+											end
+									end
+							end
+						else
+							begin
+								if(lsbfe)
+									begin
+										if(c1<=3'd7)
+											begin
+												if(mss1)
+													begin
+														mosi<=shift_reg[c1];
+														c1<=c1+3'd1;
+													end
+												else
+													begin
+														mosi<=mosi;
+														c1<=c1;
+													end
+											end
+										else
+											begin
+												c1<=3'd0;
+												mosi<=mosi;
+											end
+									end
+								else
+									begin
+										if(c2>=3'd0)
+											begin
+												if(mss1)
+													begin
+														mosi<=shift_reg[c2];
+														c2<=c2-3'd1;
+													end
+												else
+													begin
+														mosi<=mosi;
+														c2<=c2;
+													end
+											end
+										else
+											begin
+												c2<=3'd7;
+												mosi<=mosi;
+											end
+									end
+							end
+					end
+			end
+	end	
+
+
+endmodule
+
+
+
+

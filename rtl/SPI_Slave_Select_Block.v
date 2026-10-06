@@ -1,0 +1,116 @@
+module SPI_Slave_Select_Block(pclk,preset_n,mstr,spiswai,spi_mode,send_data,baudratedivisor,receive_data,ss,tip);
+
+ input pclk;
+ input preset_n;
+ input mstr;
+ input spiswai;
+ input [1:0]spi_mode;
+ input send_data;
+ input [11:0]baudratedivisor;
+
+
+ output reg receive_data;
+ output reg ss;
+ output tip;
+
+ reg [15:0]count;
+ reg rcv;
+ 
+
+ wire [16:0]target;
+
+
+assign target = 8*baudratedivisor;
+assign tip = ~ss;
+
+always@(posedge pclk or negedge preset_n)
+	begin
+		if(!preset_n)
+			begin
+				ss <= 1'b1;
+				count <= 16'hffff;
+			end
+		else
+			begin
+				if((spi_mode==3'b00 || (spi_mode==3'b01 && spiswai==1'b0)) && mstr==1'b1)
+					begin
+						if(send_data)
+							begin
+								ss <= 1'b0;
+								count <= 16'd0;
+							end
+						else
+							begin
+								if(count <= target - 1'd1)
+									begin
+										ss <= 1'b0;
+										count <= count+1'b1;
+									end
+								else
+									begin
+										ss <= 1'b1;
+										count <= 16'hffff;
+									end
+							end
+					end
+				else
+					begin
+						ss <= 1'b1;
+						count <= 16'hffff;
+					end
+			end
+	end
+
+
+
+always@(posedge pclk or negedge preset_n)
+	begin
+		if(!preset_n)
+			begin
+				receive_data <= 1'b0;
+			end
+		else
+			begin
+				receive_data <= rcv;
+			end
+	end
+
+// rcv
+always@(posedge pclk or negedge preset_n)
+	begin
+		if(!preset_n)
+			begin
+				rcv <= 1'b0;
+			end
+		else
+			begin
+				if((spi_mode==3'b00 || (spi_mode==3'b01 && spiswai==1'b0)) && mstr==1'b1)
+					begin
+						if(send_data)
+							begin
+								rcv <= 1'b0;
+							end
+						else
+							begin
+								if(count == target - 1'b1)
+									begin
+										rcv <= 1'b1;
+									end
+								else
+									begin
+										rcv <= 1'b0;
+									end
+							end
+					end
+				else
+					begin
+						rcv <= 1'b0;
+					end
+			end
+	end
+
+
+
+endmodule
+
+
